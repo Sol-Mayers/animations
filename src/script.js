@@ -1,10 +1,43 @@
 import * as THREE from 'three';
 import {OrbitControls} from  'three/examples/jsm/controls/OrbitControls.js';
-import gsap from 'gsap';
-import * as dat from 'lil-gui';
 
-//Debug
-const gui = new dat.GUI();
+// Textures
+const loadingManager = new THREE.LoadingManager();
+
+// loadingManager.onStart = () => {
+//     console.log('start')
+// }
+
+// loadingManager.onLoad = () => {
+//     console.log('load')
+// }
+
+// loadingManager.onProgress = () => {
+//     console.log('progress')
+// }
+
+// loadingManager.onError = () => {
+//     console.log('error')
+// }
+
+const textureLoader = new THREE.TextureLoader(loadingManager);
+const colorTexture = textureLoader.load('/wooden-box.jpg');
+
+// colorTexture.repeat.x = 2;
+// colorTexture.repeat.y = 3;
+// colorTexture.wrapS = THREE.RepeatWrapping;
+// colorTexture.wrapT = THREE.RepeatWrapping;
+
+// colorTexture.offset.x = 0.5;
+// colorTexture.offset.y = 0.5;
+
+// colorTexture.rotation = Math.PI / 4;
+// colorTexture.center.y = 0.5;
+// colorTexture.center.x = 0.5;
+
+colorTexture.generateMipmaps = false;
+colorTexture.minFilter = THREE.NearestFilter
+// colorTexture.magFilter = THREE.NearestFilter
 
 // Canvas
 const canvas = document.getElementById('webgl');
@@ -22,40 +55,12 @@ window.addEventListener('mousemove', (e) => {
 const scene = new THREE.Scene();
 
 // Object
-// const geometry = new THREE.BoxGeometry(1,1,1,4,4,4);
-
-const params = {
-    'Цвет': '#ff00ff',
-    spin: () => {
-        gsap.to(mesh.rotation, {y: mesh.rotation.y + 10, duration: 1})
-    }
-};
-
 const geometry = new THREE.BoxBufferGeometry(1,1,1);
 const material = new THREE.MeshBasicMaterial({
-        color: params['Цвет']
+        map: colorTexture
     });
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
-
-//Debug
-gui.add(mesh.position, 'y')
-    .min(-1)
-    .max(3)
-    .step(0.01).name('Ось Y');
-
-gui.add(mesh, 'visible').name('Видимость');
-
-gui.add(material, 'wireframe').name('Каркас');
-
-gui
-    .addColor(params, 'Цвет')
-    .onChange(() => {
-        material.color.set(params['Цвет']);
-    });
-
-gui
-    .add(params, 'spin')
 
 // Sizes
 const sizes = {
