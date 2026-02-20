@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import {OrbitControls} from  'three/examples/jsm/controls/OrbitControls.js';
+import gsap from 'gsap';
+import * as dat from 'lil-gui';
 
+//Debug
+const gui = new dat.GUI();
+
+// Canvas
 const canvas = document.getElementById('webgl');
 // Cursor
 const cursor = {
@@ -18,25 +24,38 @@ const scene = new THREE.Scene();
 // Object
 // const geometry = new THREE.BoxGeometry(1,1,1,4,4,4);
 
-const geometry = new THREE.BufferGeometry();
+const params = {
+    'Цвет': '#ff00ff',
+    spin: () => {
+        gsap.to(mesh.rotation, {y: mesh.rotation.y + 10, duration: 1})
+    }
+};
 
-const count = 5000;
-const positionsArray = new Float32Array(count * 3 * 3);
-
-for(let i = 0; i < count * 3 * 3; i++) {
-    positionsArray[i] = (Math.random() - 0.5) * 4;
-}
-
-const positionsAttribute = new THREE.BufferAttribute(positionsArray, 3);
-geometry.setAttribute('position', positionsAttribute);
-
+const geometry = new THREE.BoxBufferGeometry(1,1,1);
 const material = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-        wireframe: true,
+        color: params['Цвет']
     });
-
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
+
+//Debug
+gui.add(mesh.position, 'y')
+    .min(-1)
+    .max(3)
+    .step(0.01).name('Ось Y');
+
+gui.add(mesh, 'visible').name('Видимость');
+
+gui.add(material, 'wireframe').name('Каркас');
+
+gui
+    .addColor(params, 'Цвет')
+    .onChange(() => {
+        material.color.set(params['Цвет']);
+    });
+
+gui
+    .add(params, 'spin')
 
 // Sizes
 const sizes = {
