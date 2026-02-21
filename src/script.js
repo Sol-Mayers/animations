@@ -1,44 +1,31 @@
 import * as THREE from 'three';
 import {OrbitControls} from  'three/examples/jsm/controls/OrbitControls.js';
+import * as dat from 'lil-gui';
+
+//Debug
+const gui = new dat.GUI;
 
 // Textures
-const loadingManager = new THREE.LoadingManager();
+const textureLoader = new THREE.TextureLoader();
+const cubeTextureLoader = new THREE.CubeTextureLoader();
 
-// loadingManager.onStart = () => {
-//     console.log('start')
-// }
+const doorColorTexture = textureLoader.load('/door/color.jpg');
+const matCapTexture = textureLoader.load('/matcaps/metall-matcap.jpg');
+const doorAlphaTexture = textureLoader.load('/door/alpha.jpg');
+const doorAmbientOcclusionTexture = textureLoader.load('/door/ambientOcclusion.jpg');
+const doorHeightTexture = textureLoader.load('/door/height.jpg');
+const doorNormalTexture = textureLoader.load('/door/normal.jpg');
+const doorMetalnessTexture = textureLoader.load('/door/metalness.jpg');
+const doorRoughnessTexture = textureLoader.load('/door/roughness.jpg');
 
-// loadingManager.onLoad = () => {
-//     console.log('load')
-// }
-
-// loadingManager.onProgress = () => {
-//     console.log('progress')
-// }
-
-// loadingManager.onError = () => {
-//     console.log('error')
-// }
-
-const textureLoader = new THREE.TextureLoader(loadingManager);
-const colorTexture = textureLoader.load('/wooden-box.jpg');
-
-// colorTexture.repeat.x = 2;
-// colorTexture.repeat.y = 3;
-// colorTexture.wrapS = THREE.RepeatWrapping;
-// colorTexture.wrapT = THREE.RepeatWrapping;
-
-// colorTexture.offset.x = 0.5;
-// colorTexture.offset.y = 0.5;
-
-// colorTexture.rotation = Math.PI / 4;
-// colorTexture.center.y = 0.5;
-// colorTexture.center.x = 0.5;
-
-colorTexture.generateMipmaps = false;
-colorTexture.minFilter = THREE.NearestFilter
-// colorTexture.magFilter = THREE.NearestFilter
-
+const environmentMapTexture = cubeTextureLoader.load([
+    '/environmentmaps/xp.png',
+    '/environmentmaps/xn.png',
+    '/environmentmaps/yp.png',
+    '/environmentmaps/yn.png',
+    '/environmentmaps/zp.png',
+    '/environmentmaps/zn.png',
+]);
 // Canvas
 const canvas = document.getElementById('webgl');
 // Cursor
@@ -55,12 +42,94 @@ window.addEventListener('mousemove', (e) => {
 const scene = new THREE.Scene();
 
 // Object
-const geometry = new THREE.BoxBufferGeometry(1,1,1);
-const material = new THREE.MeshBasicMaterial({
-        map: colorTexture
-    });
-const mesh = new THREE.Mesh(geometry, material);
-scene.add(mesh);
+// const material = new THREE.MeshBasicMaterial();
+// material.map = doorColorTexture;
+// material.color = new THREE.Color('red')
+// material.flatShading = true;
+// material.opacity = 0.5;
+// material.transparent = true;
+
+
+// const material = new THREE.MeshNormalMaterial();
+// material.flatShading = true;
+
+// const material = new THREE.MeshMatcapMaterial();
+// material.matcap = matCapTexture;
+
+// const material = new THREE.MeshDepthMaterial();
+
+// const material = new THREE.MeshLambertMaterial();
+
+// const material = new THREE.MeshPhongMaterial();
+// material.shininess = 100;
+// material.specular = new THREE.Color(0xff0000);
+
+// const material = new THREE.MeshToonMaterial();
+
+// Door
+// const material = new THREE.MeshStandardMaterial();
+// material.side = THREE.DoubleSide;
+// material.metalness = 0;
+// material.roughness = 1;
+// material.map = doorColorTexture;
+// material.aoMap = doorAmbientOcclusionTexture;
+// material.aoMapIntensity = 1;
+// material.displacementMap = doorHeightTexture;
+// material.displacementScale = 0.05;
+// material.metalnessMap = doorMetalnessTexture;
+// material.roughnessMap = doorRoughnessTexture;
+// material.normalMap = doorNormalTexture;
+// material.normalScale.set(0.5, 0.5);
+// material.transparent = true;
+// material.alphaMap = doorAlphaTexture;
+
+const material = new THREE.MeshStandardMaterial();
+material.side = THREE.DoubleSide;
+material.metalness = 0.7;
+material.roughness = 0.2;
+material.envMap = environmentMapTexture;
+
+gui.add(material, 'metalness').min(0).max(1).step(0.0001);
+gui.add(material, 'roughness').min(0).max(1).step(0.0001);
+gui.add(material, 'aoMapIntensity').min(0).max(10).step(0.0001);
+gui.add(material, 'displacementScale').min(0).max(1).step(0.0001);
+
+const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 64, 64),
+    material
+);
+sphere.position.x = -1.5;
+
+sphere.geometry.setAttribute('uv2', new THREE.BufferAttribute(sphere.geometry.attributes.uv.array, 2));
+
+const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1, 100, 100),
+    material
+);
+
+plane.geometry.setAttribute('uv2', new THREE.BufferAttribute(plane.geometry.attributes.uv.array, 2));
+
+const torus = new THREE.Mesh(
+    new THREE.TorusGeometry(0.3, 0.2, 64, 128),
+    material
+);
+
+torus.position.x = 1.5;
+
+torus.geometry.setAttribute('uv2', new THREE.BufferAttribute(torus.geometry.attributes.uv.array, 2));
+
+scene.add(sphere, plane, torus);
+
+// lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+const pointLight = new THREE.PointLight(0xffffff, 0.5);
+pointLight.position.x = 2;
+pointLight.position.y = 3;
+pointLight.position.z = 4;
+
+scene.add(pointLight);
 
 // Sizes
 const sizes = {
@@ -102,26 +171,13 @@ window.addEventListener('dblclick', () => {
 // Camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
 
-// const aspectRatio = sizes.width / sizes.height;
-// const camera = new THREE.OrthographicCamera(
-//     -1 * aspectRatio, 
-//     1 * aspectRatio, 
-//     1, 
-//     -1, 
-//     0.1, 
-//     100
-// );
 camera.position.z = 3;
-// camera.position.x = 2;
-// camera.position.y = 2;
-camera.lookAt(mesh.position);
+// camera.lookAt(mesh.position);
 scene.add(camera);
 
 //Controls
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-// controls.target.y = 1;
-// controls.update();
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -138,19 +194,21 @@ const tick = () => {
     const elapsedTime = clock.getElapsedTime();
 
     // Update objects
-    // mesh.rotation.y = elapsedTime;
+    sphere.rotation.y = 0.1 * elapsedTime;
+    plane.rotation.y = 0.1 * elapsedTime;
+    torus.rotation.y = 0.1 * elapsedTime;
 
-    // Update camera
-    // camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 3;
-    // camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 3;
-    // camera.position.y = cursor.y * 5; 
-    // camera.lookAt(mesh.position);
+    sphere.rotation.x = 0.15 * elapsedTime;
+    plane.rotation.x = 0.15 * elapsedTime;
+    torus.rotation.x = 0.15 * elapsedTime;
 
     // Update controls
     controls.update();
     
     // Render
     renderer.render(scene, camera);
+
+    // Call tick
     window.requestAnimationFrame(tick);
 };
 
