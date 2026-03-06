@@ -4,8 +4,13 @@ import * as dat from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
 
+// Loaders
+const gltfLoader = new GLTFLoader();
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+
 // Debug
 const gui = new dat.GUI();
+const debugObject = {};
 
 const canvas = document.getElementById("webgl");
 // Cursor
@@ -17,46 +22,100 @@ const cursor = {
 // Scene
 const scene = new THREE.Scene();
 
-// Objects
-const object1 = new THREE.Mesh(
-  new THREE.SphereGeometry(0.5, 16, 16),
-  new THREE.MeshBasicMaterial({ color: "#ff0000" }),
-);
-object1.position.x = -2;
+// Update all materials
+const updateAllMaterials = () => {
+  scene.traverse((child) => {
+    if (
+      child instanceof THREE.Mesh &&
+      child.material instanceof THREE.MeshStandardMaterial
+    ) {
+      child.material.envMapIntensity = debugObject.envMapIntensity;
+      child.material.needsUpdate = true;
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+};
 
-const object2 = new THREE.Mesh(
-  new THREE.SphereGeometry(0.5, 16, 16),
-  new THREE.MeshBasicMaterial({ color: "#ff0000" }),
-);
+// Environment map
+const environmentMap = cubeTextureLoader.load([
+  "/environmentmaps/new/px.jpg",
+  "/environmentmaps/new/nx.jpg",
+  "/environmentmaps/new/py.jpg",
+  "/environmentmaps/new/ny.jpg",
+  "/environmentmaps/new/pz.jpg",
+  "/environmentmaps/new/nz.jpg",
+]);
+environmentMap.encoding = THREE.sRGBEncoding;
+scene.background = environmentMap;
+scene.environment = environmentMap;
 
-const object3 = new THREE.Mesh(
-  new THREE.SphereGeometry(0.5, 16, 16),
-  new THREE.MeshBasicMaterial({ color: "#ff0000" }),
-);
-object3.position.x = 2;
+debugObject.envMapIntensity = 5;
+gui
+  .add(debugObject, "envMapIntensity")
+  .min(0)
+  .max(10)
+  .step(0.001)
+  .onChange(updateAllMaterials);
 
-scene.add(object1, object2, object3);
+// Models
+gltfLoader.load("/models/FlightHelmet/glTF/FlightHelmet.gltf", (gltf) => {
+  gltf.scene.scale.set(10, 10, 10);
+  gltf.scene.position.set(0, -4, 0);
+  gltf.scene.rotation.y = Math.PI * 0.5;
+  scene.add(gltf.scene);
 
-// Raycaster
-const raycaster = new THREE.Raycaster();
+  gui
+    .add(gltf.scene.rotation, "y")
+    .min(-Math.PI)
+    .max(Math.PI)
+    .step(-0.001)
+    .name("rotation");
+
+  updateAllMaterials();
+});
 
 // Lights
-
-// Ambient light
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-scene.add(ambientLight);
-
 // Directional light
-const directionalLight = new THREE.DirectionalLight("#ffffff", 0.5);
+const directionalLight = new THREE.DirectionalLight("#ffffff", 3);
+directionalLight.position.set(0.25, 3, -2.25);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.set(1024, 1024);
 directionalLight.shadow.camera.far = 15;
-directionalLight.shadow.camera.left = -7;
-directionalLight.shadow.camera.top = 7;
-directionalLight.shadow.camera.right = 7;
-directionalLight.shadow.camera.bottom = -7;
-directionalLight.position.set(5, 5, 5);
+directionalLight.shadow.mapSize.set(1024, 1024);
 scene.add(directionalLight);
+
+// const directionalLightCameraHelper = new THREE.CameraHelper(
+//   directionalLight.shadow.camera,
+// );
+// scene.add(directionalLightCameraHelper);
+
+gui
+  .add(directionalLight, "intensity")
+  .min(0)
+  .max(10)
+  .step(0.001)
+  .name("lightIntensity");
+
+gui
+  .add(directionalLight.position, "x")
+  .min(-5)
+  .max(5)
+  .step(0.001)
+  .name("lightX");
+
+gui
+  .add(directionalLight.position, "y")
+  .min(-5)
+  .max(5)
+  .step(0.001)
+  .name("lightY");
+
+gui
+  .add(directionalLight.position, "z")
+  .min(-5)
+  .max(5)
+  .step(0.001)
+  .name("lightZ");
 
 // Sizes
 const sizes = {
@@ -83,49 +142,6 @@ window.addEventListener("resize", () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
-const mouse = new THREE.Vector2();
-
-window.addEventListener("mousemove", (event) => {
-  mouse.x = (event.clientX / sizes.width) * 2 - 1;
-  mouse.y = -(event.clientY / sizes.height) * 2 + 1;
-});
-
-window.addEventListener("click", () => {
-  if (currentIntersect) {
-    switch (currentIntersect.object) {
-      case object1:
-        console.log("1");
-        break;
-
-      case object2:
-        console.log("2");
-        break;
-
-      case object3:
-        console.log("3");
-        break;
-    }
-  }
-});
-
-// Обработка двойного клика
-// window.addEventListener('dblclick', () => {
-//     const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
-//     if(!fullscreenElement) {
-//         if(canvas.requestFullscreen) {
-//             canvas.requestFullscreen();
-//         } else if(canvas.webkitRequestFullscreen) {
-//             canvas.webkitRequestFullscreen();
-//         }
-//     } else {
-//         if(document.exitFullscreen) {
-//             document.exitFullscreen();
-//         } else if(document.webkitExitFullscreen) {
-//             document.webkitExitFullscreen()
-//         }
-//     }
-// })
-
 // Base camera
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -143,71 +159,35 @@ controls.enableDamping = true;
 // Renderer
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
+  antialias: true,
 });
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.physicallyCorrectLights = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ReinhardToneMapping;
+renderer.toneMappingExposure = 3;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Model
-const gltfLoader = new GLTFLoader();
-
-let model = null;
-gltfLoader.load("/models/Duck/glTF-Binary/Duck.glb", (gltf) => {
-  model = gltf.scene;
-  model.position.y = -1.2;
-  scene.add(model);
+gui.add(renderer, "toneMapping", {
+  No: THREE.NoToneMapping,
+  Linear: THREE.LinearToneMapping,
+  Reinhard: THREE.ReinhardToneMapping,
+  Cineon: THREE.CineonToneMapping,
+  ACESFilmic: THREE.ACESFilmicToneMapping,
 });
+
+gui.add(renderer, "toneMappingExposure").min(0).max(10).step(0.001);
 
 // Clock
 const clock = new THREE.Clock();
 
-let currentIntersect = null;
-
 // Animations
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
-
-  // Animate objects
-  object1.position.y = Math.sin(elapsedTime * 0.3) * 1.5;
-  object2.position.y = Math.sin(elapsedTime * 0.8) * 1.5;
-  object3.position.y = Math.sin(elapsedTime * 1.4) * 1.5;
-
-  // Cast a ray
-  raycaster.setFromCamera(mouse, camera);
-  const objectsToTest = [object1, object2, object3];
-  const intersects = raycaster.intersectObjects(objectsToTest);
-
-  for (const object of objectsToTest) {
-    object.material.color.set("#ff0000");
-  }
-
-  for (const intersect of intersects) {
-    intersect.object.material.color.set("#0000ff");
-  }
-
-  if (intersects.length) {
-    if (currentIntersect === null) {
-      console.log();
-    }
-    currentIntersect = intersects[0];
-  } else {
-    if (currentIntersect) {
-      console.log();
-    }
-    currentIntersect = null;
-  }
-
-  // Test intersect with model
-  if (model !== null) {
-    const modelIntersects = raycaster.intersectObject(model);
-
-    if (modelIntersects.length) {
-      model.scale.set(1.2, 1.2, 1.2);
-    } else {
-      model.scale.set(1, 1, 1);
-    }
-  }
 
   // Update controls
   controls.update();
