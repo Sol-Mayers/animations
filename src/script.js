@@ -2,10 +2,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as dat from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import gsap from "gsap";
 
 // Loaders
 const gltfLoader = new GLTFLoader();
+const textureLoader = new THREE.TextureLoader();
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 
 // Debug
@@ -47,10 +47,9 @@ const environmentMap = cubeTextureLoader.load([
   "/environmentmaps/new/nz.jpg",
 ]);
 environmentMap.encoding = THREE.sRGBEncoding;
-scene.background = environmentMap;
 scene.environment = environmentMap;
 
-debugObject.envMapIntensity = 5;
+debugObject.envMapIntensity = 0.4;
 gui
   .add(debugObject, "envMapIntensity")
   .min(0)
@@ -59,35 +58,52 @@ gui
   .onChange(updateAllMaterials);
 
 // Models
-gltfLoader.load("/models/FlightHelmet/glTF/FlightHelmet.gltf", (gltf) => {
-  gltf.scene.scale.set(10, 10, 10);
-  gltf.scene.position.set(0, -4, 0);
-  gltf.scene.rotation.y = Math.PI * 0.5;
+let foxMixer = null;
+
+gltfLoader.load("/models/Fox/glTF/Fox.gltf", (gltf) => {
+  // Model
+  gltf.scene.scale.set(0.02, 0.02, 0.02);
   scene.add(gltf.scene);
 
-  gui
-    .add(gltf.scene.rotation, "y")
-    .min(-Math.PI)
-    .max(Math.PI)
-    .step(-0.001)
-    .name("rotation");
+  // Animation
+  foxMixer = new THREE.AnimationMixer(gltf.scene);
+  const foxAction = foxMixer.clipAction(gltf.animations[0]);
+  foxAction.play();
 
+  // Update materials
   updateAllMaterials();
 });
 
+// Floor
+const floorColorTexture = textureLoader.load("/textures/dirt/color.jpg");
+floorColorTexture.encoding = THREE.sRGBEncoding;
+floorColorTexture.repeat.set(1.5, 1.5);
+floorColorTexture.wrapS = THREE.RepeatWrapping;
+floorColorTexture.wrapT = THREE.RepeatWrapping;
+
+const floorNormalTexture = textureLoader.load("/textures/dirt/normal.jpg");
+floorNormalTexture.repeat.set(1.5, 1.5);
+floorNormalTexture.wrapS = THREE.RepeatWrapping;
+floorNormalTexture.wrapT = THREE.RepeatWrapping;
+
+const floorGeometry = new THREE.CircleGeometry(5, 64);
+const floorMaterial = new THREE.MeshStandardMaterial({
+  map: floorColorTexture,
+  normalMap: floorNormalTexture,
+});
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI * 0.5;
+scene.add(floor);
+
 // Lights
 // Directional light
-const directionalLight = new THREE.DirectionalLight("#ffffff", 3);
-directionalLight.position.set(0.25, 3, -2.25);
+const directionalLight = new THREE.DirectionalLight("#ffffff", 4);
+directionalLight.position.set(3.5, 2, -1.25);
 directionalLight.castShadow = true;
 directionalLight.shadow.camera.far = 15;
 directionalLight.shadow.mapSize.set(1024, 1024);
+directionalLight.shadow.normalBias = 0.05;
 scene.add(directionalLight);
-
-// const directionalLightCameraHelper = new THREE.CameraHelper(
-//   directionalLight.shadow.camera,
-// );
-// scene.add(directionalLightCameraHelper);
 
 gui
   .add(directionalLight, "intensity")
