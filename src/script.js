@@ -177,16 +177,15 @@ const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
   antialias: true,
 });
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.physicallyCorrectLights = true;
 renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ReinhardToneMapping;
-renderer.toneMappingExposure = 3;
+renderer.toneMapping = THREE.CineonToneMapping;
+renderer.toneMappingExposure = 1.75;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor("#211d20");
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 gui.add(renderer, "toneMapping", {
   No: THREE.NoToneMapping,
@@ -200,13 +199,21 @@ gui.add(renderer, "toneMappingExposure").min(0).max(10).step(0.001);
 
 // Clock
 const clock = new THREE.Clock();
+let previousTime = 0;
 
 // Animations
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
+  const deltaTime = elapsedTime - previousTime;
+  previousTime = elapsedTime;
 
   // Update controls
   controls.update();
+
+  // Fox animation
+  if (foxMixer) {
+    foxMixer.update(deltaTime);
+  }
 
   // Render
   renderer.render(scene, camera);
